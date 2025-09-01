@@ -113,8 +113,21 @@ dim(base_final)
 head(base_final)
 
 # Guardamos la base
-# setwd("C:/Users/kim1v/OneDrive/Documentos/GitHub/BDML-Taller1/01_import/02_output")
-fwrite(base_final, "GEIH2018_consolidada.csv", row.names = FALSE)
-export(base_final, "GEIH2018_consolidada.rds")
 
+## Identificamos la ruta donde está guardado el script (automatización del guardado)
+script_path <- rstudioapi::getSourceEditorContext()$path
+
+##Obtenemos el directorio del Script
+script_dir = dirname(script_path)
+
+##Creamos la carpeta stores para almacenar las bases
+stores_path = file.path(dirname(script_dir),"stores")
+
+# Creamos la carpeta si no existe
+if (!dir.exists(stores_path)) {
+  dir.create(stores_path, recursive = TRUE)
+}
+
+write.csv(base_final, file.path(stores_path, "GEIH2018_consolidada.csv"),row.names = FALSE)
+saveRDS(base_final, file.path(stores_path, "GEIH2018_consolidada.rds"))
 
