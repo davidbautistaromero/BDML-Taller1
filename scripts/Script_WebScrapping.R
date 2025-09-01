@@ -114,13 +114,13 @@ head(base_final)
 
 # Guardamos la base
 
-## Identificamos la ruta donde está guardado el script (automatización del guardado)
+# Identificamos la ruta donde está guardado el script (automatización del guardado)
 script_path <- rstudioapi::getSourceEditorContext()$path
 
-##Obtenemos el directorio del Script
+# Obtenemos el directorio del Script
 script_dir = dirname(script_path)
 
-##Creamos la carpeta stores para almacenar las bases
+# Creamos la carpeta stores para almacenar las bases
 stores_path = file.path(dirname(script_dir),"stores")
 
 # Creamos la carpeta si no existe
