@@ -113,7 +113,7 @@ dim(base_final)
 head(base_final)
 
 # Guardamos la base
-setwd("C:/Users/kim1v/OneDrive/Documentos/GitHub/BDML-Taller1/01_import/02_output")
+# setwd("C:/Users/kim1v/OneDrive/Documentos/GitHub/BDML-Taller1/01_import/02_output")
 fwrite(base_final, "GEIH2018_consolidada.csv", row.names = FALSE)
 export(base_final, "GEIH2018_consolidada.rds")
 
