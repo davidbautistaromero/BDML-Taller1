@@ -107,7 +107,7 @@ head(data_clean)
 sapply(data_clean, function(x) sum(is.na(x)))
 
 # Gráfica de missing para toda la base
-png(filename = file.path("graficos", "grafica_missing_todas.png"), width = 1200, height = 1000)
+png(filename = file.path("views", "grafica_missing_todas.png"), width = 1200, height = 1000)
 vis_miss(data_clean) +
   theme(
     axis.text.y = element_text(angle = 90),
@@ -127,7 +127,7 @@ data_missing <- data_clean %>%
     experiencia_anualizada, dummy_jefe
   )
 
-png(filename = file.path("graficos", "grafica_missing_clave.png"), width = 1000, height = 800)
+png(filename = file.path("views", "grafica_missing_clave.png"), width = 1000, height = 800)
 vis_miss(data_missing) +
   theme(
     axis.text.y = element_text(angle = 90),
@@ -149,7 +149,7 @@ db_miss <- db_miss %>%
 db_miss  # Tabla de missing con porcentaje
 
 # Gráfica de las 3 variables con más missing
-png(file.path("graficos", "graf_missing_var_prin.png"), width = 800, height = 600)
+png(file.path("views", "graf_missing_var_prin.png"), width = 800, height = 600)
 ggplot(head(db_miss, 3), aes(x = reorder(skim_variable, +p_missing), y = p_missing)) +
   geom_bar(stat = "identity", fill = "grey", color = "black") +
   coord_flip() +
