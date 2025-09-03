@@ -8,7 +8,7 @@
 # =============================================================================
 
 # Cargar la configuración base
-source(here::here("Scripts", "00_Config.R"))
+source(here::here("scripts", "00_Config.R"))
 
 # Importamos los datos procesados en la etapa 01 (scraping)
 data_raw <- import(here::here("stores", "GEIH2018_consolidada.csv"))

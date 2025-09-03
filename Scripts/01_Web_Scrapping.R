@@ -15,7 +15,7 @@
 # =============================================================================
 
 # Cargar configuración base
-source(here::here("Scripts", "00_Config.R"))
+source(here::here("scripts", "00_Config.R"))
 
 # -----------------------------------------------------------------------------
 # 1. Definir URL base
