@@ -4,36 +4,7 @@
 # =============================================================================
 
 # =============================================================================
-# CONFIGURACIÓN DEL AMBIENTE DE TRABAJO
-# =============================================================================
-
-# Limpiar el entorno
-rm(list = ls())
-
-# Lista de paquetes requeridos para el análisis completo
-# instalar pacman
-if(!require(pacman)) install.packages("pacman") ; require(pacman)
-
-p_load(rio,        # Importación/exportación datos
-       tidyverse,  # Herramientas de manipulación de datos y visualización
-       skimr,      # Resumen de los datos
-       visdat,     # Visualizar datos faltantes
-       corrplot,   # Gráficas de correlación
-       stargazer,  # Tablas y salida en formato TEX
-       gridExtra,  # Organiza gráficos o tablas en una misma disposición
-       MASS,       # Funciones estadisticas
-       rvest,      # Librería de web scraping
-       gt,         # Tablas descriptivas
-       gtsummary,  # Tablas resumidas de estadísticas y modelos
-       caret,      # Entrenamiento y validación de modelos
-       dplyr,      # Manipulación de datos
-       ggplot2,    # Visualización de datos
-       data.table  # Manipulación de datos
-)
-
-
-# =============================================================================
-# SECCIÓN 1: Web Scraping
+# Script_01: Web Scraping
 # =============================================================================
 # Objetivo:
 # - Obtener los datos de Bogotá del Informe de Medición de Pobreza Monetaria y
@@ -42,6 +13,13 @@ p_load(rio,        # Importación/exportación datos
 # Fuente principal:
 # - https://ignaciomsarmiento.github.io/GEIH2018_sample/
 # =============================================================================
+
+# Cargar configuración base
+source(here::here("Scripts", "00_Config.R"))
+
+# -----------------------------------------------------------------------------
+# 1. Definir URL base
+# -----------------------------------------------------------------------------
 
 # URL base para la extracción de información
 url_taller <- "https://ignaciomsarmiento.github.io/GEIH2018_sample/"
@@ -62,6 +40,10 @@ class(html_taller)
 html_taller %>%
   html_table()
 
+# -----------------------------------------------------------------------------
+# 2. Extraer enlaces de los chunks
+# -----------------------------------------------------------------------------
+
 # Al inspeccionar la página vemos que cada chunk de información esta en un 
 # elemento <li>, en el nodo <a y el atributo href
 links <- html_taller %>%
@@ -78,6 +60,10 @@ chunks <- links[grepl("page", links)]
 # Construimos las URL completas concatenando la URL base con cada chunk
 chunks_urls <- paste0(url_taller, chunks)
 print(chunks_urls)
+
+# -----------------------------------------------------------------------------
+# 3. Iterar sobre cada chunk para extraer tablas
+# -----------------------------------------------------------------------------
 
 # Extraemos las tablas de cada chunk y las unimos
 # Inicializamos el data.frame vacío
@@ -112,21 +98,9 @@ for (chunk_url in chunks_urls) {
 dim(base_final)
 head(base_final)
 
-# Guardamos la base
-
-# Identificamos la ruta donde está guardado el script (automatización del guardado)
-script_path <- rstudioapi::getSourceEditorContext()$path
-
-# Obtenemos el directorio del Script
-script_dir = dirname(script_path)
-
-# Creamos la carpeta stores para almacenar las bases
-stores_path = file.path(dirname(script_dir),"stores")
-
-# Creamos la carpeta si no existe
-if (!dir.exists(stores_path)) {
-  dir.create(stores_path, recursive = TRUE)
-}
+# -----------------------------------------------------------------------------
+# 4. Guardar base consolidada
+# -----------------------------------------------------------------------------
 
 write.csv(base_final, file.path(stores_path, "GEIH2018_consolidada.csv"),row.names = FALSE)
 saveRDS(base_final, file.path(stores_path, "GEIH2018_consolidada.rds"))
