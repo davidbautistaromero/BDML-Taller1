@@ -18,6 +18,7 @@ p_load(rio,        # Importación/exportación datos
        gridExtra,  # Organiza gráficos o tablas en una misma disposición
        MASS,       # Funciones estadisticas
        rvest,      # Librería de web scraping
+       naniar,     # Visualizar y manipular missing values
        gt,         # Tablas descriptivas
        gtsummary,  # Tablas resumidas de estadísticas y modelos
        caret,      # Entrenamiento y validación de modelos
