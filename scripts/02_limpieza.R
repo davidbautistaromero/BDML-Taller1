@@ -41,7 +41,7 @@ data_clean <- data_clean %>%
     # Identificadores
     directorio, secuencia_p, orden,
     # Demografía
-    age, sex, estrato1, p6050,
+    age, sex, estrato1, p6050, depto,
     # Educación
     maxEducLevel,
     # Laboral
@@ -49,7 +49,7 @@ data_clean <- data_clean %>%
     sizeFirm, p6426, formal, informal,
     # Ingresos
     y_total_m, y_total_m_ha, y_otros_m, y_salary_m, 
-    ingtot, ingtotes, ingtotob,
+    ingtot, ingtotes, ingtotob,y_salary_m_hu,y_ingLab_m_ha,
     # Salud y pensión
     regSalud, cotPension, fex_c
   ) %>%
@@ -60,6 +60,7 @@ data_clean <- data_clean %>%
     edad                      = age,
     sexo                      = sex,
     estrato                   = estrato1,
+    departamento              = depto,
     parentesco_jefe           = p6050,
     nivel_educ_max            = maxEducLevel,
     ocupacion                 = oficio,
@@ -80,7 +81,9 @@ data_clean <- data_clean %>%
     ingreso_total_observado   = ingtotob,
     regimen_salud             = regSalud,
     cotiza_pension            = cotPension,
-    factor_expansion          = fex_c
+    factor_expansion          = fex_c,
+    salario_real_hora         = y_salary_m_hu,
+    ingreso_laboral_hora      = y_ingLab_m_ha
   )
 
 # Creamos variables que necesitamos para el análisis, saber si es jefe de
@@ -123,7 +126,7 @@ data_missing <- data_clean %>%
     nivel_educ_max,
     ocupacion, trabajo_formal, trabajador_independiente,
     horas_trab, horas_trab_usual, tamanio_empresa, trabajo_informal,
-    ingreso_total, ingreso_hora, otros_ingresos,
+    ingreso_total, ingreso_hora, otros_ingresos,salario_mensual,
     experiencia_anualizada, dummy_jefe
   )
 
@@ -159,8 +162,11 @@ ggplot(head(db_miss, 3), aes(x = reorder(skim_variable, +p_missing), y = p_missi
         plot.title = element_text(size = 12, face = "bold"))
 dev.off()
 
+
+
 # Eliminamos la variable otros_ingresos ya que como vemos en la gráfica la mayoria
 # de sus datos son missing
+
 data_clean <- data_clean %>%
   dplyr::select(-otros_ingresos)
 
@@ -168,13 +174,35 @@ data_clean <- data_clean %>%
 # Ahora vamos a analizar que haremos con el resto de variables con gran proporción
 # de missings
 
+# Analisis de sensibilidad, vemos la media antes y después de la transformación 
+
+mean(data_clean$ingreso_hora, na.rm=TRUE)
+
+##Cambiar a regresion
 data_clean <- data_clean %>%
   group_by(ocupacion, trabajador_independiente) %>%
-  mutate(ingreso_hora_imp = ifelse(is.na(ingreso_hora), mean(ingreso_hora, na.rm = TRUE), ingreso_hora)) %>%
+  mutate(ingreso_hora = ifelse(is.na(ingreso_hora), mean(ingreso_hora, na.rm = TRUE), ingreso_hora)) %>%
   ungroup()
 
+mean(data_clean$ingreso_hora, na.rm=TRUE)
+
+
+mean(data_clean$ingreso_total, na.rm=TRUE)
+
+##Cambiar a regresion
+data_clean <- data_clean %>%
+  group_by(ocupacion, trabajador_independiente) %>%
+  mutate(ingreso_total = ifelse(is.na(ingreso_total), mean(ingreso_total, na.rm = TRUE), ingreso_hora)) %>%
+  ungroup()
+
+mean(data_clean$ingreso_total, na.rm=TRUE)
+
+#### La media cambia mucho con estos arreglos. Parece mejor la regresión
+### Validar método de imputación para el salario
+
+
 # Eliminar filas donde no se pudo imputar
-data_clean <- data_clean %>% filter(!is.na(ingreso_hora_imp))
+data_clean <- data_clean %>% filter(!is.na(ingreso_hora))
 
 # Calcular moda de la educación
 mode_edu <- as.numeric(names(sort(table(data_clean$nivel_educ_max), decreasing = TRUE)[1]))
@@ -196,7 +224,7 @@ winsorize <- function(x, q = 0.99){
 
 data_clean <- data_clean %>%
   mutate(
-    ingreso_hora_imp_w = winsorize(ingreso_hora_imp),
+    ingreso_hora_w = winsorize(ingreso_hora),
     edad_w             = winsorize(edad),
     experiencia_w      = winsorize(experiencia_anualizada),
     horas_trab_w       = winsorize(horas_trab)
@@ -206,8 +234,8 @@ data_clean <- data_clean %>%
 
 data_clean <- data_clean %>%
   mutate(
-    log_ing_h_imp = log(ingreso_hora_imp),
-    log_ing_h_win = log(ingreso_hora_imp_w)
+    log_ing_h = log(ingreso_hora),
+    log_ing_h_win = log(ingreso_hora_w)
   )
 
 data_clean <- data_clean %>%
@@ -218,11 +246,14 @@ data_clean <- data_clean %>%
     tfirma_factor   = as.factor(tamanio_empresa)
   )
 
-data_clean <- data_clean %>%
-  mutate(Mujer = ifelse(sexo == 0, 1, 0))
+##data_clean <- data_clean %>%
+  ##mutate(Mujer = ifelse(sexo == 0, 1, 0)) No necesario, creo 
 
 data_clean <- data_clean %>%
   mutate(Edad2 = edad_w^2)
+
+data_clean <- data_clean %>%
+  mutate(ingresos_no_laborales = ingreso_total-salario_mensual)
 
 
 # Exportar la base final
