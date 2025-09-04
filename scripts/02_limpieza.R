@@ -253,7 +253,7 @@ data_clean <- data_clean %>%
   mutate(Edad2 = edad_w^2)
 
 data_clean <- data_clean %>%
-  mutate(ingresos_no_laborales = ingreso_total-salario_mensual)
+  mutate(ingresos_no_laborales = ingreso_total_observado-salario_mensual)
 
 
 # Exportar la base final
