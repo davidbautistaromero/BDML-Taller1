@@ -82,8 +82,8 @@ data_clean <- data_clean %>%
     regimen_salud             = regSalud,
     cotiza_pension            = cotPension,
     factor_expansion          = fex_c,
-    salario_real_hora         = y_salary_m_hu,
-    ingreso_laboral_hora      = y_ingLab_m_ha
+    salario_real_hora         = y_salary_m_hu,#esta es solo la actividad principal
+    ingreso_laboral_hora      = y_ingLab_m_ha #ingreso laboral por todas las ocupaciones
   )
 
 # Creamos variables que necesitamos para el análisis, saber si es jefe de
@@ -127,7 +127,7 @@ data_missing <- data_clean %>%
     ocupacion, trabajo_formal, trabajador_independiente,
     horas_trab, horas_trab_usual, tamanio_empresa, trabajo_informal,
     ingreso_total, ingreso_hora, otros_ingresos,salario_mensual,
-    experiencia_anualizada, dummy_jefe
+    experiencia_anualizada, dummy_jefe, salario_real_hora, ingreso_laboral_hora
   )
 
 png(filename = file.path("views", "grafica_missing_clave.png"), width = 1000, height = 800)
@@ -151,13 +151,13 @@ db_miss <- db_miss %>%
 
 db_miss  # Tabla de missing con porcentaje
 
-# Gráfica de las 3 variables con más missing
+# Gráfica de las 5 variables con más missing
 png(file.path("views", "graf_missing_var_prin.png"), width = 800, height = 600)
-ggplot(head(db_miss, 3), aes(x = reorder(skim_variable, +p_missing), y = p_missing)) +
+ggplot(head(db_miss, 5), aes(x = reorder(skim_variable, +p_missing), y = p_missing)) +
   geom_bar(stat = "identity", fill = "grey", color = "black") +
   coord_flip() +
   theme_minimal() +
-  labs(title = "Top 3 Variables con más Missing", x = "Variables", y = "Proporción de Missing") +
+  labs(title = "Top 5 Variables con más Missing", x = "Variables", y = "Proporción de Missing") +
   theme(axis.text = element_text(size = 10),
         plot.title = element_text(size = 12, face = "bold"))
 dev.off()
@@ -227,7 +227,10 @@ data_clean <- data_clean %>%
     ingreso_hora_w = winsorize(ingreso_hora),
     edad_w             = winsorize(edad),
     experiencia_w      = winsorize(experiencia_anualizada),
-    horas_trab_w       = winsorize(horas_trab)
+    horas_trab_w       = winsorize(horas_trab),
+    salario_real_hora_w     = winsorize(salario_real_hora),
+    ingreso_laboral_hora_w  = winsorize(ingreso_laboral_hora)
+    
   )
 
 # Variables nuevas para el análisis
@@ -235,7 +238,9 @@ data_clean <- data_clean %>%
 data_clean <- data_clean %>%
   mutate(
     log_ing_h = log(ingreso_hora),
-    log_ing_h_win = log(ingreso_hora_w)
+    log_ing_h_win = log(ingreso_hora_w),
+    log_salario_real_hora_w = log(salario_real_hora_w),
+    log_ingreso_laboral_hora_w = log(ingreso_laboral_hora_w)
   )
 
 data_clean <- data_clean %>%
@@ -246,8 +251,8 @@ data_clean <- data_clean %>%
     tfirma_factor   = as.factor(tamanio_empresa)
   )
 
-##data_clean <- data_clean %>%
-  ##mutate(Mujer = ifelse(sexo == 0, 1, 0)) No necesario, creo 
+data_clean <- data_clean %>%
+  mutate(Mujer = ifelse(sexo == 0, 1, 0)) #No necesario, creo #Nico: yo si lo veo necesario, para la interpretación, es decir, que el beta nos de el efecto porcentual de ser mujer para el punto 4
 
 data_clean <- data_clean %>%
   mutate(Edad2 = edad_w^2)
