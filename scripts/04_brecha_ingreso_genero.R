@@ -16,33 +16,7 @@ base_final <- import(here::here("stores", "base_final.rds"))
 attach(base_final)
 
 
-#probar winsor arriba y abajo
-# Función para winsorizar ambaos extremos de la distribuión
-winsorizer <- function(x, probs = c(0.01, 0.99)) {
-  quantiles <- quantile(x, probs = probs, na.rm = TRUE)
-  x[x < quantiles[1]] <- quantiles[1]
-  x[x > quantiles[2]] <- quantiles[2]
-  x
-}
-
-# Crear versiones winsorizadas 
-base_final <- base_final %>%
-  mutate(
-    ing_h_winsor = winsorizer(ingreso_hora),
-    ingreso_laboral_hora_winsor = winsorizer(ingreso_laboral_hora),
-    salario_real_hora_winsor = winsorizer(salario_real_hora)
-  )
-
-##Creación de los logaritmos de los ingresos##
-base_final <- base_final %>%
-  mutate(
-    log_salario_real_hora_winsor = log(salario_real_hora_winsor),
-    log_ingreso_laboral_hora_winsor = log(ingreso_laboral_hora_winsor),
-    log_ing_h_winsor = log(ing_h_winsor)
-  )
-
 #Comparamos las diferentes variables objetivo que son los ingresos
-
 
 #summary(ingreso_hora) #sin winsor
 #summary(ingreso_hora_w) #winsor a la derecha
@@ -56,12 +30,11 @@ base_final <- base_final %>%
 #summary(salario_real_hora_w) #winsor a la derecha
 #summary(salario_real_hora_winsor) #winsor en las dos colas
 
-
-
 #observamos que la variable salario real  e ingreso laboral difieren en su media.
+
 #para solucionar esto, usaremos la variable que representa mejor la idea de pago igual por trabajos iguales
 #esta variable es en nuestro analisis "salario_real_hora" en sus transformación.
-#en el documento se desarrolla teoricamente el por que de esta elección.
+#en el documento se desarrolla teoricamente el porque de esta elección.
 
 # Inspección inicial
 names(base_final)        # Nombres de variables
@@ -105,43 +78,39 @@ lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 +factor(nivel_educ_max) +
 # --- Comparación con el modelo completo para verificar ---
 
 # Estimamos el modelo completo usando lm()
-model_completo <- lm(log_salario_real_hora_w ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
+model_completo <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
 m_full <- resid(model_completo)
 
 
 ########################################################################################
-base_final <- base_final %>% filter(!is.na(log_salario_real_hora_w))
+#### salario_real_hora tiene menos observaciones y para que el FWL se pueda multiplicar matricialmente, se debe acortar la base por las dimenciones
+base_final <- base_final %>% filter(!is.na(log_salario_real_hora_winsor))
 
-# === 3. Matriz de controles X (sin Mujer) ===
+# === Matriz de controles X (sin Mujer) ===
 form_X <- ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal
 X_mat <- model.matrix(form_X, data = base_final)
 
-# === 4. Regresión de Mujer en X ===
+# === Regresión de Mujer en X ===
 m_Mujer_X <- lm(Mujer ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
 res_Mujer <- resid(m_Mujer_X)
 
 # === 5. Regresión de log_salario en X ===
-m_Y_X <- lm(log_salario_real_hora_w ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
+m_Y_X <- lm(log_salario_real_hora_winsor ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
 res_Y <- resid(m_Y_X)
 
 # === 6. Regresión FWL (resid_Y ~ resid_Mujer) ===
 m_FWL <- lm(res_Y ~ res_Mujer -1 )  # +0 evita intercepto redundante
 summary(m_FWL)
 
-# === 7. Comparar coeficientes ===
+# === Comparar coeficientes ===
 cbind(
-  beta_full = coef(m_full)["Mujer"],
+  beta_full = coef(model_completo)["Mujer"],
   beta_FWL  = coef(m_FWL)["res_Mujer"]
 )
 
-
 ########################################################################################
-# 1. Cargar librerías necesarias
-# Nos aseguramos de tener 'boot' para el procedimiento de bootstrap.
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, boot, stargazer)
 
-# 2. Recrear la base de datos para asegurar la replicabilidad del ejemplo
+# Recrear la base de datos para asegurar la replicabilidad del ejemplo
 # En tu script, simplemente asegúrate de que 'base_final' esté cargada y limpia.
 if (!exists("base_final")) {
   set.seed(10101)
@@ -156,10 +125,10 @@ if (!exists("base_final")) {
       as.numeric(nivel_educ_max) * 0.1 + as.numeric(tamanio_empresa) * 0.08 +
       (0.2 * trabajo_formal) + rnorm(n, 0, 0.5)
   ) %>% mutate(Edad2 = edad^2) %>%
-    filter(!is.na(log_salario_real_hora_w)) # Importante: filtrar NAs
+    filter(!is.na(log_salario_real_hora_winsor)) # Importante: filtrar NAs
 }
 
-# 3. Definir la función para el estimador FWL (para usar con boot)
+# Definir la función para el estimador FWL (para usar con boot)
 # Esta función encapsula todo tu código anterior.
 # Recibe los datos y los 'indices' de la muestra bootstrap actual.
 fwl_bootstrap_function <- function(data, indices) {
@@ -167,9 +136,9 @@ fwl_bootstrap_function <- function(data, indices) {
   sample_data <- data[indices, ]
   
   # Definir la fórmula de los controles
-  controls_formula <- log_salario_real_hora_w ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal
+  controls_formula <- log_salario_real_hora_winsor ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal
   
-  # Paso 1: Residualizar Y (log_salario_real_hora_w)
+  # Paso 1: Residualizar Y (log_salario_real_hora_winsor)
   lm_y <- lm(update(controls_formula, log_salario_real_hora_w ~ .), data = sample_data)
   y_tilde <- residuals(lm_y)
   
@@ -202,7 +171,7 @@ boot.ci(bootstrap_fwl_results, type = "perc")
 ################## GRAFICO ####################################
 # Estimar el modelo con interacciones
 # Usamos Mujer * (edad + Edad2) para que R incluya los términos principales y sus interacciones.
-model_interaction <- lm(log_salario_real_hora_w ~ Mujer * (edad + Edad2) + 
+model_interaction <- lm(log_salario_real_hora_winsor ~ Mujer * (edad + Edad2) + 
                           factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, 
                         data = base_final)
 
@@ -215,7 +184,7 @@ peak_age_function <- function(data, indices) {
   sample_data <- data[indices, ]
   
   # Estimar el modelo en la muestra
-  model <- lm(log_salario_real_hora_w ~ Mujer * (edad + Edad2) + 
+  model <- lm(log_salario_real_hora_winsor ~ Mujer * (edad + Edad2) + 
                 factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, 
               data = sample_data)
   
@@ -282,10 +251,8 @@ ggplot(new_data, aes(x = edad, y = predicted_log_wage, color = factor(Mujer))) +
   theme_minimal(base_size = 14)
 dev.off()
 
-#para observar la edad pico con el ingreso, se selecciona el mayor 
-summary(new_data)
 
 ##################### Exportar la base final #################################
-export(base_final, store_file("base_final.rds"))
+export(new_data, store_file("edad_pico.rds"))
 
 

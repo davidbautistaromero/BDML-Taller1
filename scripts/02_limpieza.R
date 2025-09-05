@@ -233,6 +233,32 @@ data_clean <- data_clean %>%
     
   )
 
+#probar winsor arriba y abajo
+# Función para winsorizar ambaos extremos de la distribuión
+winsorizer <- function(x, probs = c(0.01, 0.99)) {
+  quantiles <- quantile(x, probs = probs, na.rm = TRUE)
+  x[x < quantiles[1]] <- quantiles[1]
+  x[x > quantiles[2]] <- quantiles[2]
+  x
+}
+
+# Crear versiones winsorizadas 
+data_clean <- data_clean %>%
+  mutate(
+    ing_h_winsor = winsorizer(ingreso_hora),
+    ingreso_laboral_hora_winsor = winsorizer(ingreso_laboral_hora),
+    salario_real_hora_winsor = winsorizer(salario_real_hora)
+  )
+
+##Creación de los logaritmos de los ingresos##
+data_clean <- data_clean %>%
+  mutate(
+    log_salario_real_hora_winsor = log(salario_real_hora_winsor),
+    log_ingreso_laboral_hora_winsor = log(ingreso_laboral_hora_winsor),
+    log_ing_h_winsor = log(ing_h_winsor)
+  )
+
+
 # Variables nuevas para el análisis
 
 data_clean <- data_clean %>%

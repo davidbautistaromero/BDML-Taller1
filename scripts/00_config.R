@@ -25,7 +25,8 @@ p_load(rio,        # Importación/exportación datos
        dplyr,      # Manipulación de datos
        ggplot2,    # Visualización de datos
        data.table, # Manipulación de datos
-       here        # Gestionar rutas
+       here,       # Gestionar rutas
+       boot        # Bootstrap  
 )
 
 # Definir rutas 
