@@ -1,5 +1,5 @@
 # =============================================================================
-# Script_04: Mismo pago apra el mismo trabajo 04_brecha_ingreso_genero
+# Script_04: Mismo pago para el mismo trabajo 04_brecha_ingreso_genero
 # =============================================================================
 # Objetivos:
 # - Encontrar la correlación entre el ingreso total frente a ser mujer en Bogotá para el año 2018.
