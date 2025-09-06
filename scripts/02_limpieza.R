@@ -100,7 +100,16 @@ data_clean$dummy_jefe <- ifelse(data_clean$parentesco_jefe == 1, 1, 0)
 data_clean <- data_clean %>% 
   mutate(experiencia_anualizada = experiencia / 12)
 
+data_clean <- data_clean %>%
+  mutate(
+    ocupacion_factor = as.factor(ocupacion),
+    edu_factor      = as.factor(nivel_educ_max),
+    estrato_factor  = as.factor(estrato),
+    tfirma_factor   = as.factor(tamanio_empresa)
+  )
+
 head(data_clean)
+
 
 # -----------------------------------------------------------------------------
 # 3. Revisar  valores faltantes
@@ -174,31 +183,58 @@ data_clean <- data_clean %>%
 # Ahora vamos a analizar que haremos con el resto de variables con gran proporción
 # de missings
 
-# Analisis de sensibilidad, vemos la media antes y después de la transformación 
+# Analisis de sensibilidad, vemos la media y la mediana antes y después de la transformación 
+
+
+# Distribucion del ingreso por hora
+png(filename = file.path("views", "distribucion_ingreso_hora.png"), width = 1000, height = 800)
+ggplot(data_clean, aes(ingreso_hora)) +
+  geom_histogram(color = "#000000", fill = "#0099F8") +
+  geom_vline(xintercept = median(data_clean$ingreso_hora, na.rm = TRUE), linetype = "dashed", color = "red") +
+  geom_vline(xintercept = mean(data_clean$ingreso_hora, na.rm = TRUE), linetype = "dashed", color = "blue") +  
+  ggtitle(" Ingreso Hora") +
+  theme_classic() +
+  theme(plot.title = element_text(size = 18))
+dev.off()
+
 
 mean(data_clean$ingreso_hora, na.rm=TRUE)
-
-##Cambiar a regresion
-data_clean <- data_clean %>%
-  group_by(ocupacion, trabajador_independiente) %>%
-  mutate(ingreso_hora = ifelse(is.na(ingreso_hora), mean(ingreso_hora, na.rm = TRUE), ingreso_hora)) %>%
-  ungroup()
-
-mean(data_clean$ingreso_hora, na.rm=TRUE)
+median(data_clean$ingreso_hora, na.rm=TRUE)
 
 
-mean(data_clean$ingreso_total, na.rm=TRUE)
+## Imputacion por regresion
+ingreso_hora_lm <- lm(ingreso_hora ~  sexo + edad + nivel_educ_max + estrato , data = data_clean)
+summary(ingreso_hora_lm)
 
-##Cambiar a regresion
-data_clean <- data_clean %>%
-  group_by(ocupacion, trabajador_independiente) %>%
-  mutate(ingreso_total = ifelse(is.na(ingreso_total), mean(ingreso_total, na.rm = TRUE), ingreso_hora)) %>%
-  ungroup()
+data_clean$ingreso_hora_pred <- predict(ingreso_hora_lm, newdata = data_clean)
 
-mean(data_clean$ingreso_total, na.rm=TRUE)
+data_clean<-  data_clean %>%  
+  mutate(ingreso_hora_implm = ifelse(is.na(ingreso_hora) == TRUE, ingreso_hora_pred , ingreso_hora))
 
-#### La media cambia mucho con estos arreglos. Parece mejor la regresión
-### Validar método de imputación para el salario
+mean(data_clean$ingreso_hora_implm, na.rm=TRUE)
+median(data_clean$ingreso_hora_implm, na.rm=TRUE)
+
+
+# imputación por media grupal 
+data_clean <- data_clean  %>%
+  mutate(ingreso_hora_median = ifelse(is.na(ingreso_hora) == TRUE, median(data_clean$ingreso_hora, na.rm = TRUE) , ingreso_hora))
+
+mean(data_clean$ingreso_hora_median, na.rm=TRUE)
+median(data_clean$ingreso_hora_median, na.rm=TRUE)
+
+
+#### La mediana cambia un poco más la distribución que la regresion, así que imputamos por regresion
+data_clean <- data_clean %>% 
+  mutate(ingreso_hora=ingreso_hora_implm)
+
+## Imputacion por regresion para ingreso por hora
+ingreso_total_lm <- lm(ingreso_total ~  sexo + edad + nivel_educ_max + estrato , data = data_clean)
+summary(ingreso_total_lm)
+
+data_clean$ingreso_total_pred <- predict(ingreso_total_lm, newdata = data_clean)
+
+data_clean<-  data_clean %>%  
+  mutate(ingreso_total = ifelse(is.na(ingreso_total) == TRUE, ingreso_total_pred , ingreso_total))
 
 
 # Eliminar filas donde no se pudo imputar
@@ -270,15 +306,7 @@ data_clean <- data_clean %>%
   )
 
 data_clean <- data_clean %>%
-  mutate(
-    ocupacion_factor = as.factor(ocupacion),
-    edu_factor      = as.factor(nivel_educ_max),
-    estrato_factor  = as.factor(estrato),
-    tfirma_factor   = as.factor(tamanio_empresa)
-  )
-
-data_clean <- data_clean %>%
-  mutate(Mujer = ifelse(sexo == 0, 1, 0)) #No necesario, creo #Nico: yo si lo veo necesario, para la interpretación, es decir, que el beta nos de el efecto porcentual de ser mujer para el punto 4
+  mutate(Mujer = ifelse(sexo == 0, 1, 0)) 
 
 data_clean <- data_clean %>%
   mutate(Edad2 = edad_w^2)
@@ -286,6 +314,11 @@ data_clean <- data_clean %>%
 data_clean <- data_clean %>%
   mutate(ingresos_no_laborales = ingreso_total_observado-salario_mensual)
 
+
+# Eliminamos variables innecesarias
+
+data_clean <- data_clean %>%
+  dplyr::select(-c(ingreso_hora_pred,ingreso_hora_implm,ingreso_hora_median, ingreso_total_pred))
 
 # Exportar la base final
 export(data_clean, store_file("base_final.rds"))
