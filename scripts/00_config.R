@@ -44,4 +44,3 @@ if (!dir.exists(stores_path)) {
 store_file <- function(filename) {
   file.path(stores_path, filename)
 }
-
