@@ -24,6 +24,7 @@ str(data_raw)          # Tipos de variables
 # Validamos que la data sea solo de Bogotá
 table(data_raw$dominio)
 
+
 # Restringir datos a personas mayores de 18 años empleadas
 data_clean <- data_raw %>%
   filter(age >=  18,  # Mayores de 18
@@ -41,7 +42,7 @@ data_clean <- data_clean %>%
     # Identificadores
     directorio, secuencia_p, orden,
     # Demografía
-    age, sex, estrato1, p6050, depto,
+    age, sex, estrato1, p6050,
     # Educación
     maxEducLevel,
     # Laboral
@@ -60,7 +61,6 @@ data_clean <- data_clean %>%
     edad                      = age,
     sexo                      = sex,
     estrato                   = estrato1,
-    departamento              = depto,
     parentesco_jefe           = p6050,
     nivel_educ_max            = maxEducLevel,
     ocupacion                 = oficio,
@@ -247,8 +247,8 @@ mode_edu <- as.numeric(names(sort(table(data_clean$nivel_educ_max), decreasing =
 data_clean <- data_clean %>%
   mutate(nivel_educ_max = ifelse(is.na(nivel_educ_max), mode_edu, nivel_educ_max))
 
-
-summary(data_clean$ingreso_hora_imp) 
+data_clean <- data_clean %>%
+  mutate(edu_factor = ifelse(is.na(nivel_educ_max), mode_edu, nivel_educ_max))
 
  
 # Valores atipicos 
@@ -296,14 +296,6 @@ data_clean <- data_clean %>%
 
 
 # Variables nuevas para el análisis
-
-data_clean <- data_clean %>%
-  mutate(
-    log_ing_h = log(ingreso_hora),
-    log_ing_h_win = log(ingreso_hora_w),
-    log_salario_real_hora_w = log(salario_real_hora_w),
-    log_ingreso_laboral_hora_w = log(ingreso_laboral_hora_w)
-  )
 
 data_clean <- data_clean %>%
   mutate(Mujer = ifelse(sexo == 0, 1, 0)) 
