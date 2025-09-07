@@ -23,9 +23,9 @@ names(base_final)
 # la regresion 3 involucra el ingreso total de los individuos.
 
 
-reg_1 = lm(log(salario_real_hora_winsor) ~ edad + Edad2 , data = base_final)
-reg_2 = lm(log(ingreso_laboral_hora_winsor) ~ edad + Edad2, data = base_final)
-reg_3= lm(log(ing_h_winsor) ~ edad + Edad2, data = base_final)
+reg_1 = lm(log_salario_real_hora_w ~ edad + Edad2 , data = base_final)
+reg_2 = lm(log_ingreso_laboral_hora_winsor ~ edad + Edad2, data = base_final)
+reg_3= lm(log_ing_h ~ edad + Edad2, data = base_final)
 
 # 2. Calcular la edad que maximiza el ingreso en cada modelo 
 
@@ -81,19 +81,19 @@ ggplot(grafico, aes(x = edad, y= log_ingreso, color=modelo)) +
 # funcion que hace la estimacion. Luego el maximo de la funcion de ingreso, indexa 
 # y devuleve el estimador de interes
 eta1 = function(data, index){
-  reg = lm(log(salario_real_hora_winsor) ~ edad + Edad2 , data, subset = index)
+  reg = lm(log_salario_real_hora_w ~ edad + Edad2 , data, subset = index)
   max_ingreso = -coef(reg)["edad"]/(2*coef(reg)["Edad2"])
   return(max_ingreso)
 }
 
 eta2 = function(data, index){
-  reg = lm(log(ingreso_laboral_hora_winsor) ~ edad + Edad2, data, subset = index)
+  reg = lm(log_ingreso_laboral_hora_winsor ~ edad + Edad2, data, subset = index)
   max_ingreso = -coef(reg)["edad"]/(2*coef(reg)["Edad2"])
   return(max_ingreso)
 }
 
 eta3 = function(data, index){
-  reg = lm(log(ing_h_winsor) ~ edad + Edad2, data, subset = index)
+  reg = lm(log_ing_h ~ edad + Edad2, data, subset = index)
   max_ingreso = -coef(reg)["edad"]/(2*coef(reg)["Edad2"])
   return(max_ingreso)
 }
