@@ -15,7 +15,6 @@ source(here::here("scripts", "00_Config.R"))
 base_final <- import(here::here("stores", "base_final.rds"))
 attach(base_final)
 
-
 #Comparamos las diferentes variables objetivo que son los ingresos
 
 #summary(ingreso_hora) #sin winsor
@@ -39,7 +38,7 @@ attach(base_final)
 # Inspección inicial
 names(base_final)        # Nombres de variables
 str(base_final)          # Tipos de variables
-attach(base_final)
+
 
 # 4a. Brecha Incondicional
 
@@ -60,25 +59,76 @@ modelo_multiocup <- lm(log(ingreso_laboral_hora_winsor) ~ Mujer, data = base_fin
 modelo_ingresotot <- lm(log(ing_h_winsor) ~ Mujer, data = base_final)
 
 # 4. Generar la tabla con stargazer
-stargazer(modelo_unicaocup,modelo_multiocup, modelo_ingresotot, 
-          type = "text",
-          title = "Comparación de la Brecha Salarial Incondicional con Diferentes Mediciones de Ingreso por Hora",
-          dep.var.labels.include = FALSE, # No incluir los nombres largos de las variables dependientes
+# Usamos el argumento 'out' para especificar un archivo de salida
+stargazer(modelo_unicaocup, modelo_multiocup, modelo_ingresotot, 
+          type = "latex",
+          title = "Comparación de la Brecha Salarial Incondicional...",
+          dep.var.labels.include = FALSE,
           column.labels = c("Log(Ing. ocupación principal)", "Log(Ing. todas las ocupaciones)", "Log(total ingresos)"),
           covariate.labels = c("Mujer", "Constante"),
           notes = "Errores estándar en paréntesis.",
-          align = TRUE)
+          align = TRUE,
+          out = "tabla_gender_gap_comp_income.tex") 
 
 # 4b. Brecha Condicional con FWL
 
 #Definimos los controles que consideramos buenos omitiendo los malos
 #¿hablamos de los malos?
 
-lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 +factor(nivel_educ_max) +factor(tamanio_empresa) + trabajo_formal)
+
+###############################################################################
+# Estimar los cuatro modelos de regresión
+# Modelo 1: Sin control por ocupación
+m1 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
+
+# Modelo 2: Control por 'ocupacion_o' todas las ocupaciones
+m2 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(ocupacion_o), data = base_final)
+
+# Modelo 3: Control por 'ocupacion_directiva' Variable creada mediante selección 
+m3 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + ocupacion_directiva, data = base_final)
+
+# Modelo 4: Control por 'tipo_ocupacion' una variable que habla del tipo de la ocupación ->descartado
+m4 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(tipo_ocupacion), data = base_final)
+
+
+# 4. Crear la fila personalizada para los controles de ocupación
+# Esta es una lista donde cada elemento es un vector que representa una fila en la tabla.
+# El primer elemento del vector es el nombre de la fila, y los siguientes son los valores para cada columna.
+controles_adicionales <- list(c("Control por Ocupación", "No", "Sí (Detallada)", "Sí (Directiva)", "Sí (Tipo)"))
+
+
+# 5. Generar la tabla stargazer para LaTeX
+stargazer(m1, m2, m3, m4,
+          type = "text",
+          title = "Análisis de la Brecha Salarial de Género con Diferentes Controles por Ocupación",
+          
+          # --- Argumentos clave para la personalización ---
+          keep = c("Mujer"), # Solo muestra el coeficiente de la variable 'Mujer'
+          covariate.labels = c("Mujer"), # Etiqueta para la variable 'Mujer'
+          add.lines = controles_adicionales, # Añade la fila personalizada
+          
+          # --- Formato y etiquetas ---
+          dep.var.labels.include = FALSE, # Oculta los nombres de la variable dependiente
+          dep.var.caption = "Variable Dependiente: Log(Salario Real por Hora Winsorizado)",
+          column.labels = c("Modelo Base", "Ocupación Detallada", "Ocupación Directiva", "Tipo de Ocupación"),
+          notes = "Errores estándar en paréntesis. Todos los modelos incluyen controles por edad, edad al cuadrado, nivel educativo, tamaño de empresa y formalidad.",
+          notes.align = "l",
+          align = TRUE,
+          
+          # --- Opciones para una tabla LaTeX más limpia ---
+          header = FALSE, # Evita la cabecera por defecto de stargazer
+          no.space = TRUE, # Elimina espacios extra entre filas
+          float = TRUE, # Asegura que sea un entorno 'table' flotante
+          font.size = "small" # Ajusta el tamaño de la fuente si es necesario
+)
+
+#######
+
+
 # --- Comparación con el modelo completo para verificar ---
 
 # Estimamos el modelo completo usando lm()
-model_completo <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
+model_completo <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(ocupacion_o), data = base_final)
 m_full <- resid(model_completo)
 
 
@@ -87,15 +137,15 @@ m_full <- resid(model_completo)
 base_final <- base_final %>% filter(!is.na(log_salario_real_hora_winsor))
 
 # === Matriz de controles X (sin Mujer) ===
-form_X <- ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal
+form_X <- ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(ocupacion_o)
 X_mat <- model.matrix(form_X, data = base_final)
 
 # === Regresión de Mujer en X ===
-m_Mujer_X <- lm(Mujer ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
+m_Mujer_X <- lm(Mujer ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(ocupacion_o), data = base_final)
 res_Mujer <- resid(m_Mujer_X)
 
 # === 5. Regresión de log_salario en X ===
-m_Y_X <- lm(log_salario_real_hora_winsor ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
+m_Y_X <- lm(log_salario_real_hora_winsor ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(ocupacion_o), data = base_final)
 res_Y <- resid(m_Y_X)
 
 # === 6. Regresión FWL (resid_Y ~ resid_Mujer) ===
@@ -139,7 +189,7 @@ fwl_bootstrap_function <- function(data, indices) {
   controls_formula <- log_salario_real_hora_winsor ~ edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal
   
   # Paso 1: Residualizar Y (log_salario_real_hora_winsor)
-  lm_y <- lm(update(controls_formula, log_salario_real_hora_w ~ .), data = sample_data)
+  lm_y <- lm(update(controls_formula, log_salario_real_hora_winsor ~ .), data = sample_data)
   y_tilde <- residuals(lm_y)
   
   # Paso 2: Residualizar X (Mujer)
@@ -172,7 +222,7 @@ boot.ci(bootstrap_fwl_results, type = "perc")
 # Estimar el modelo con interacciones
 # Usamos Mujer * (edad + Edad2) para que R incluya los términos principales y sus interacciones.
 model_interaction <- lm(log_salario_real_hora_winsor ~ Mujer * (edad + Edad2) + 
-                          factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, 
+                          factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(ocupacion_o), 
                         data = base_final)
 
 # Presentar los resultados del modelo
@@ -185,7 +235,7 @@ peak_age_function <- function(data, indices) {
   
   # Estimar el modelo en la muestra
   model <- lm(log_salario_real_hora_winsor ~ Mujer * (edad + Edad2) + 
-                factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, 
+                factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(ocupacion_o), 
               data = sample_data)
   
   coefs <- coef(model)
@@ -227,32 +277,71 @@ new_data <- expand.grid(
   edad = seq(18, 65, by = 1),
   Mujer = c(0, 1),
   # Mantenemos los otros controles en sus valores promedio/modales
-  nivel_educ_max = factor(floor(mean(as.numeric(base_final$nivel_educ_max)))),
-  tamanio_empresa = factor(floor(mean(as.numeric(base_final$tamanio_empresa)))),
-  trabajo_formal = 1
+  nivel_educ_max = 7,
+  tamanio_empresa = 5,
+  trabajo_formal = 1,
+  ocupacion_o = 36
 )
 new_data$Edad2 <- new_data$edad^2
-
 # Predecir los salarios
-new_data$predicted_log_wage <- predict(model_interaction, newdata = new_data)
-
-# Graficar con ggplot2
-
-png(file.path("views", "graf_edad_pico.png"), width = 800, height = 600)
-ggplot(new_data, aes(x = edad, y = predicted_log_wage, color = factor(Mujer))) +
-  geom_line(linewidth = 1.2) +
-  labs(
-    title = "Perfil Edad-Ingreso Predicho por Género",
-    x = "Edad",
-    y = "Logaritmo del Salario por Hora (Predicho)",
-    color = "Género"
-  ) +
-  scale_color_manual(values = c("0" = "#0072B2", "1" = "#D55E00"), labels = c("Hombres", "Mujeres")) +
-  theme_minimal(base_size = 14)
-dev.off()
-
+new_data$predictions_with_ci <- predict(model_interaction, newdata = new_data, interval = "confidence", level = 0.95)
+predictions_with_ci$predictions_with_ci <- predict(model_interaction, newdata = new_data, interval = "confidence", level = 0.95)
+df.predict.peak.age<-as.data.frame(predictions_with_ci)
 
 ##################### Exportar la base final #################################
 export(new_data, store_file("edad_pico.rds"))
+##########################
 
+# 1. Definir las edades pico a partir de tus resultados del bootstrap
+peak_age_hombres <- 61.18792
+peak_age_mujeres <- 57.15148
 
+# 2. Código para la gráfica
+png(file.path("views", "graf_edad_pico_con_lineas.png"), width = 800, height = 600)
+
+ggplot(df.predict.peak.age, aes(x = edad, y = fit, color = factor(Mujer), fill = factor(Mujer))) +
+  
+  # Capa para el intervalo de confianza (la cinta sombreada)
+  geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2, color = NA) +
+  
+  # Capa para la línea de predicción puntual
+  geom_line(linewidth = 1.2) +
+  
+  # --- NUEVAS LÍNEAS VERTICALES ---
+  # Línea para la edad pico de los hombres
+  geom_vline(xintercept = peak_age_hombres, linetype = "dashed", color = "#0072B2", linewidth = 1) +
+  
+  # Línea para la edad pico de las mujeres
+  geom_vline(xintercept = peak_age_mujeres, linetype = "dashed", color = "#D55E00", linewidth = 1) +
+  
+  # --- ETIQUETAS PARA LAS LÍNEAS VERTICALES ---
+  annotate("text", 
+           x = peak_age_hombres, 
+           y = min(df.predict.peak.age$lwr), # Posición en el eje Y (abajo)
+           label = paste("Pico Hombres\n", round(peak_age_hombres, 1), "años"), 
+           vjust = -0.5, # Ajuste vertical para que no se pegue a la línea
+           color = "#0072B2",
+           fontface = "bold") +
+  
+  annotate("text", 
+           x = peak_age_mujeres, 
+           y = min(df.predict.peak.age$lwr), # Posición en el eje Y (abajo)
+           label = paste("Pico Mujeres\n", round(peak_age_mujeres, 1), "años"), 
+           vjust = -1.5, # Ajuste vertical diferente para evitar solapamiento
+           color = "#D55E00",
+           fontface = "bold") +
+  
+  # Etiquetas y formato general
+  labs(
+    title = "Perfil Edad-Ingreso Predicho por Género con Edades Pico",
+    x = "Edad",
+    y = "Logaritmo del Salario por Hora (Predicho)",
+    color = "Género",
+    fill = "Género" # Asegúrate de incluir 'fill' en labs si lo usas en aes()
+  ) +
+  scale_color_manual(values = c("0" = "#0072B2", "1" = "#D55E00"), labels = c("Hombres", "Mujeres")) +
+  scale_fill_manual(values = c("0" = "#0072B2", "1" = "#D55E00"), labels = c("Hombres", "Mujeres")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom")
+
+dev.off()
