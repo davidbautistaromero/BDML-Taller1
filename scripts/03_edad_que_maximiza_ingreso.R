@@ -49,31 +49,41 @@ rango_edad = seq(min(base_final$edad), max(base_final$edad), by =1 ) # Eje x del
 grafico = data.frame(edad = rango_edad, Edad2 = rango_edad^2) # df para almacenar datos del grafico
 
 # agregar los valores predichos a la base del grafico 
-grafico$pred_1 = predict(reg_1, newdata = grafico)
-grafico$pred_2 = predict(reg_2, newdata = grafico)
-grafico$pred_3 = predict(reg_3, newdata = grafico)
+pred_1 = predict(reg_1, newdata = grafico, interval = "confidence")
+pred_2 = predict(reg_2, newdata = grafico, interval = "confidence")
+pred_3 = predict(reg_3, newdata = grafico, interval = "confidence")
 
 # emplear ggplot2 para graficar 
-grafico = grafico %>% 
-  select(edad, pred_1, pred_2, pred_3) %>% 
-  pivot_longer(cols = starts_with("pred_"),
-               names_to = "modelo",
-               values_to = "log_ingreso") %>% 
-  mutate(modelo = recode(modelo,
-                         "pred_1"= "Ingresos de la ocupación principal",
-                         "pred_2"= "Ingresos por todas las ocupaciones",
-                         "pred_3"= "total ingresos"))
+grafico_long <- bind_rows(
+  data.frame(edad = rango_edad,
+             log_ingreso = pred_1[, "fit"],
+             lower = pred_1[, "lwr"],
+             upper = pred_1[, "upr"],
+             modelo = "Ingresos de la ocupación principal"),
+  data.frame(edad = rango_edad,
+             log_ingreso = pred_2[, "fit"],
+             lower = pred_2[, "lwr"],
+             upper = pred_2[, "upr"],
+             modelo = "Ingresos por todas las ocupaciones"),
+  data.frame(edad = rango_edad,
+             log_ingreso = pred_3[, "fit"],
+             lower = pred_3[, "lwr"],
+             upper = pred_3[, "upr"],
+             modelo = "Total ingresos")
+)
+ggplot(grafico_long, aes(x = edad, y = log_ingreso, color = modelo)) +
+  geom_line(size = 0.7) +
+  geom_ribbon(aes(ymin = lower, ymax = upper, fill = modelo), alpha = 0.2, color = NA) +
+  labs(title = "Relación entre edad e ingresos laborales en Colombia",
+       x = "Edad",
+       y = "Logaritmo de los ingresos laborales",
+       color = "Variable dependiente",
+       fill = "Variable dependiente",
+       caption = "Datos tomados de la GEIH (2018). Cálculos propios.") +
+  scale_x_continuous(breaks = seq(20, 100, 10)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
 
-ggplot(grafico, aes(x = edad, y= log_ingreso, color=modelo)) +
-  geom_line(size=0.7)+
-  labs(title="Relación entre edad e ingresos laborales en Colombia",
-       x="Edad",
-       y="Logaritmo de los ingresos laborales",
-       color="Variable dependiente",
-       caption= "Datos tomados de la GEIH. Los calculos propios.")+
-  scale_x_continuous(breaks = seq(20, 100, 10 ))+
-  theme(plot.title = element_text(hjust = 0.5))+
-  theme_bw()
 
 #5. Calcular mediante bootstrap los intervalos de confianza de la edad que 
 # maximiza el ingreso. 
