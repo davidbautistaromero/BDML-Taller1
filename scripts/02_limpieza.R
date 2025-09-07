@@ -306,6 +306,46 @@ data_clean <- data_clean %>%
 data_clean <- data_clean %>%
   mutate(ingresos_no_laborales = ingreso_total_observado-salario_mensual)
 
+#### Creación de variables de ocupación ####
+# Definir el umbral de frecuencia y el código para la variable de ocupación y otros
+
+table(data_clean$ocupacion)
+
+data_clean <- data_clean %>%
+  add_count(ocupacion_factor, name = "n_ocupacion") %>%
+  mutate(ocupacion_o = ifelse(n_ocupacion >= 100, ocupacion_factor, 100))
+
+table(data_clean$ocupacion_o)
+
+table(data_clean$ocupacion_factor[data_clean$ocupacion_factor == 45])
+table(data_clean$ocupacion_o)
+typeof(data_clean$ocupacion_o)
+
+data_clean <- data_clean %>%
+  mutate(ocupacion_o = factor(ocupacion_o))
+
+typeof(data_clean$ocupacion_o)
+
+
+# (Recomendado) Verificar el resultado
+# Esto nos mostrará las frecuencias de los códigos en la nueva columna.
+# Deberías ver el código 100 y solo aquellos códigos originales cuya frecuencia era >= 200.
+cat("--- Frecuencias de la nueva variable 'ocupacion_control' ---\n")
+print(table(data_clean$ocupacion_o))
+
+
+# Definir la variable de ocupaciones directivas y otras
+# Definir la lista de códigos de oficio que consideramos directivos
+cod_ocup_altos <- c(18, 30, 40, 42, 50, 51, 60, 70)
+
+# rear la variable dummy 'ocupacion_directiva'
+# Usamos mutate() con ifelse() para crear la variable.
+# Si el 'oficio' está en nuestra lista de directivos, asigna 1. De lo contrario, 0.
+data_clean <- data_clean %>%
+  mutate(
+    ocupacion_directiva = ifelse(ocupacion_factor %in% cod_ocup_altos, 1, 0)
+  )
+
 
 # Eliminamos variables innecesarias
 
