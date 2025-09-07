@@ -51,7 +51,7 @@ test  <- pred_df %>% filter(!(row_number() %in% inTrain))
 
 model1 <- lm(log_salario_real_hora_winsor ~ edad + Edad2 , data = train)
 
-formula2 <- log_salario_real_hora_winsor ~ Mujer + edad + Edad2 +edu_factor +tfirma_factor + trabajo_formal + factor(tipo_ocupacion)
+formula2 <- log_salario_real_hora_winsor ~ Mujer + edad + Edad2 +edu_factor +tfirma_factor + trabajo_formal + ocupacion_o
 model2 <- lm(formula2, data = train)
 
 
@@ -60,7 +60,7 @@ model2 <- lm(formula2, data = train)
 ## Agregamos algunas otras variables 
 
 formula3 <- log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + edu_factor + tfirma_factor + trabajo_formal + 
-  factor(tipo_ocupacion) + log_ing_h_winsor + estrato_factor
+  ocupacion_o + log_ing_h_winsor + estrato_factor
 
 model3 <- lm(formula3, data=train)
 
@@ -69,7 +69,7 @@ model3 <- lm(formula3, data=train)
 
 formula4 <- log_salario_real_hora_winsor ~ Mujer + 
   poly(edad,4, raw = TRUE) + poly(log_ing_h_winsor,4, raw = TRUE) +
-  edu_factor + tfirma_factor + trabajo_formal + factor(tipo_ocupacion) + estrato_factor
+  edu_factor + tfirma_factor + trabajo_formal + ocupacion_o + estrato_factor
 model4 <- lm(formula4, data=train)
 
 ## Polinomios de 4 orden mas interaccion con genero
@@ -77,7 +77,7 @@ model4 <- lm(formula4, data=train)
 formula5 <- log_salario_real_hora_winsor ~ Mujer + 
   poly(edad,4, raw = TRUE) + poly(edad,4, raw = TRUE):Mujer +
   poly(log_ing_h_winsor,4, raw = TRUE) + poly(log_ing_h_winsor,4, raw = TRUE):Mujer +
-  edu_factor + tfirma_factor + trabajo_formal + factor(tipo_ocupacion) + estrato_factor
+  edu_factor + tfirma_factor + trabajo_formal + ocupacion_o + estrato_factor
 model5 <- lm(formula5, data=train)
 
 ## Polinomios de 4 orden con interacciones entre ellos
@@ -86,13 +86,13 @@ formula6 <- log_salario_real_hora_winsor ~ Mujer +
   poly(edad,4, raw = TRUE) + poly(edad,4, raw = TRUE):Mujer +
   poly(log_ing_h_winsor,4, raw = TRUE) + poly(log_ing_h_winsor,4, raw = TRUE):Mujer +
   poly(edad,4, raw = TRUE):poly(log_ing_h_winsor,4, raw = TRUE) +
-  edu_factor + tfirma_factor + trabajo_formal + factor(tipo_ocupacion) + estrato_factor
+  edu_factor + tfirma_factor + trabajo_formal + ocupacion_o +  estrato_factor
 model6 <- lm(formula6, data=train)
 
 ## Agregamos más variables al modelo 3
 
 formula7 <- log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + edu_factor + tfirma_factor + trabajo_formal + 
-  factor(tipo_ocupacion) + log_ing_h_winsor + estrato_factor + poly(experiencia_anualizada,2,raw=TRUE) + 
+  ocupacion_o + log_ing_h_winsor + estrato_factor + poly(experiencia_anualizada,2,raw=TRUE) + 
   horas_trab + factor(cotiza_pension) + dummy_jefe 
 model7 <- lm(formula7,data=train)
 
