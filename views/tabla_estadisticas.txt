@@ -1,0 +1,15 @@
+
+Tabla 1. Estadísticas Descriptivas
+========================================================================
+Statistic                         N     Mean   St. Dev.   Min     Max   
+------------------------------------------------------------------------
+Salario por hora (winsorizado)  9,892  7,643.8 8,983.7  1,166.7 58,333.3
+Edad (winsorizada)              16,542  39.4     13.4     18       72   
+Horas trabajadas (winsorizadas) 16,542  47.3     15.4      1       96   
+Experiencia (winsorizada)       16,542   5.2     7.2      0.0     33.3  
+Sexo (Mujer)                    16,542   0.5     0.5       0       1    
+Estrato                         16,542   2.6     1.0       1       6    
+Trabajador independiente        16,542   0.3     0.5       0       1    
+Trabajo formal                  16,542   0.6     0.5       0       1    
+Jefe de hogar                   16,542   0.5     0.5       0       1    
+------------------------------------------------------------------------
