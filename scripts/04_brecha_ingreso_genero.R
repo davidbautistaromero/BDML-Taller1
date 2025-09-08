@@ -55,20 +55,8 @@ str(base_final)          # Tipos de variables
 #lm(log(salario_real_hora_winsor) ~ Mujer, data = base_final)
 
 modelo_unicaocup <- lm(log(salario_real_hora_winsor) ~ Mujer, data = base_final)
-modelo_multiocup <- lm(log(ingreso_laboral_hora_winsor) ~ Mujer, data = base_final)
-modelo_ingresotot <- lm(log(ing_h_winsor) ~ Mujer, data = base_final)
-
-# 4. Generar la tabla con stargazer
-# Usamos el argumento 'out' para especificar un archivo de salida
-stargazer(modelo_unicaocup, modelo_multiocup, modelo_ingresotot, 
-          type = "latex",
-          title = "Comparación de la Brecha Salarial Incondicional...",
-          dep.var.labels.include = FALSE,
-          column.labels = c("Log(Ing. ocupación principal)", "Log(Ing. todas las ocupaciones)", "Log(total ingresos)"),
-          covariate.labels = c("Mujer", "Constante"),
-          notes = "Errores estándar en paréntesis.",
-          align = TRUE,
-          out = "tabla_gender_gap_comp_income.tex") 
+#modelo_multiocup <- lm(log(ingreso_laboral_hora_winsor) ~ Mujer, data = base_final)
+#modelo_ingresotot <- lm(log(ing_h_winsor) ~ Mujer, data = base_final)
 
 # 4b. Brecha Condicional con FWL
 
@@ -79,48 +67,18 @@ stargazer(modelo_unicaocup, modelo_multiocup, modelo_ingresotot,
 ###############################################################################
 # Estimar los cuatro modelos de regresión
 # Modelo 1: Sin control por ocupación
-m1 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
+#m1 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal, data = base_final)
 
 # Modelo 2: Control por 'ocupacion_o' todas las ocupaciones
-m2 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(ocupacion_o), data = base_final)
+m_controles <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(ocupacion_o), data = base_final)
 
 # Modelo 3: Control por 'ocupacion_directiva' Variable creada mediante selección 
-m3 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + ocupacion_directiva, data = base_final)
+#m3 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + ocupacion_directiva, data = base_final)
 
 # Modelo 4: Control por 'tipo_ocupacion' una variable que habla del tipo de la ocupación ->descartado
-m4 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(tipo_ocupacion), data = base_final)
+#m4 <- lm(log_salario_real_hora_winsor ~ Mujer + edad + Edad2 + factor(nivel_educ_max) + factor(tamanio_empresa) + trabajo_formal + factor(tipo_ocupacion), data = base_final)
 
 
-# 4. Crear la fila personalizada para los controles de ocupación
-# Esta es una lista donde cada elemento es un vector que representa una fila en la tabla.
-# El primer elemento del vector es el nombre de la fila, y los siguientes son los valores para cada columna.
-controles_adicionales <- list(c("Control por Ocupación", "No", "Sí (Detallada)", "Sí (Directiva)", "Sí (Tipo)"))
-
-
-# 5. Generar la tabla stargazer para LaTeX
-stargazer(m1, m2, m3, m4,
-          type = "text",
-          title = "Análisis de la Brecha Salarial de Género con Diferentes Controles por Ocupación",
-          
-          # --- Argumentos clave para la personalización ---
-          keep = c("Mujer"), # Solo muestra el coeficiente de la variable 'Mujer'
-          covariate.labels = c("Mujer"), # Etiqueta para la variable 'Mujer'
-          add.lines = controles_adicionales, # Añade la fila personalizada
-          
-          # --- Formato y etiquetas ---
-          dep.var.labels.include = FALSE, # Oculta los nombres de la variable dependiente
-          dep.var.caption = "Variable Dependiente: Log(Salario Real por Hora Winsorizado)",
-          column.labels = c("Modelo Base", "Ocupación Detallada", "Ocupación Directiva", "Tipo de Ocupación"),
-          notes = "Errores estándar en paréntesis. Todos los modelos incluyen controles por edad, edad al cuadrado, nivel educativo, tamaño de empresa y formalidad.",
-          notes.align = "l",
-          align = TRUE,
-          
-          # --- Opciones para una tabla LaTeX más limpia ---
-          header = FALSE, # Evita la cabecera por defecto de stargazer
-          no.space = TRUE, # Elimina espacios extra entre filas
-          float = TRUE, # Asegura que sea un entorno 'table' flotante
-          font.size = "small" # Ajusta el tamaño de la fuente si es necesario
-)
 
 #######
 
@@ -151,12 +109,6 @@ res_Y <- resid(m_Y_X)
 # === 6. Regresión FWL (resid_Y ~ resid_Mujer) ===
 m_FWL <- lm(res_Y ~ res_Mujer -1 )  # +0 evita intercepto redundante
 summary(m_FWL)
-
-# === Comparar coeficientes ===
-cbind(
-  beta_full = coef(model_completo)["Mujer"],
-  beta_FWL  = coef(m_FWL)["res_Mujer"]
-)
 
 ########################################################################################
 
@@ -210,13 +162,85 @@ bootstrap_fwl_results <- boot(
   R = 1000 # 1000 replicaciones es un buen estándar
 )
 
-# 5. Presentar los resultados del bootstrap
-cat("--- Resultados del Bootstrap para el Coeficiente de 'Mujer' ---\n")
-print(bootstrap_fwl_results)
+# Asumo que los objetos 'model_completo', 'm_FWL', y 'bootstrap_fwl_results'
+# ya existen en tu entorno de R.
 
-# 6. Calcular y presentar los intervalos de confianza
-cat("\n--- Intervalos de Confianza al 95% (Método de Percentiles) ---\n")
-boot.ci(bootstrap_fwl_results, type = "perc")
+# --- Inicio del Código para la Tabla Final del WFL ---
+
+# 1. Extraer los resultados del Modelo Completo (OLS)
+beta_full <- coef(model_completo)["Mujer"]
+ci_full <- confint(model_completo, "Mujer", level = 0.95)
+
+# 2. Extraer los resultados del Modelo FWL manual
+beta_FWL <- coef(m_FWL)["res_Mujer"]
+ci_FWL <- confint(m_FWL, "res_Mujer", level = 0.95)
+
+# 3. Extraer los resultados del Bootstrap
+beta_boot <- bootstrap_fwl_results$t0 # El coeficiente original
+ci_boot_obj <- boot.ci(bootstrap_fwl_results, type = "perc", index = 1)
+summary(bootstrap_fwl_results)
+# Extraer los límites inferior y superior del intervalo de percentiles
+ci_boot <- ci_boot_obj$percent[4:5] 
+
+# 4. Crear una tabla comparativa de las tres estimaciones
+tabla_comparativa_final <- data.frame(
+  Estimador = c("1. Modelo Completo (OLS)", 
+                "2. Modelo FWL (Manual)", 
+                "3. FWL con Bootstrap (Robusto)"),
+  Beta_Mujer = c(beta_full, beta_FWL, beta_boot),
+  Límite_Inferior_95 = c(ci_full[1], ci_FWL[1], ci_boot[1]),
+  Límite_Superior_95 = c(ci_full[2], ci_FWL[2], ci_boot[2])
+)
+
+# 5. Imprimir la tabla final bien formateada
+cat("--- Tabla Comparativa Final de Estimadores de la Brecha de Género ---\n")
+print(tabla_comparativa_final, row.names = FALSE)
+
+# 3. Crear el objeto xtable y generar el código LaTeX
+xtable_obj <- xtable(
+  tabla_comparativa_final,
+  caption = "Comparación Final de Estimadores para la Brecha de Género",
+  label = "tab:comparacion_final",
+  digits = 4 # Controlar el número de decimales
+)
+
+# 4. Imprimir el código LaTeX en la consola
+# 'comment = FALSE' elimina la marca de tiempo que xtable añade por defecto
+print(xtable_obj, type = "latex", comment = FALSE, include.rownames = FALSE)
+
+############################################################################
+########################## tabla regresiones ################################
+# 4. Crear la fila personalizada para los controles de ocupación
+# Esta es una lista donde cada elemento es un vector que representa una fila en la tabla.
+# El primer elemento del vector es el nombre de la fila, y los siguientes son los valores para cada columna.
+especificacion <- list(c("Especificación", "Sin Controles", "Con los controles", "FWL Manual", "FWL Bootstrap"))
+
+# 5. Generar la tabla stargazer para LaTeX
+stargazer(modelo_unicaocup, m_controles, m_FWL, modelo_unicaocup,
+          type = "latex",
+          title = "Análisis de la Brecha Salarial de Género con Diferentes especificaciones",
+          
+          # --- Argumentos clave para la personalización ---
+          keep = c("Mujer"), # Solo muestra el coeficiente de la variable 'Mujer'
+          covariate.labels = c("Mujer"), # Etiqueta para la variable 'Mujer'
+          add.lines = especificacion, # Añade la fila personalizada
+          
+          # --- Formato y etiquetas ---
+          dep.var.labels.include = FALSE, # Oculta los nombres de la variable dependiente
+          dep.var.caption = "Variable Dependiente: Log(Salario Real por Hora)",
+          column.labels = c("Modelo unconditional", "Con controles", "FWL", "Bootstrap"),
+          notes = "Errores estándar en paréntesis.",
+          notes.align = "l",
+          align = TRUE,
+          
+          # --- Opciones para una tabla LaTeX más limpia ---
+          header = FALSE, # Evita la cabecera por defecto de stargazer
+          no.space = TRUE, # Elimina espacios extra entre filas
+          float = TRUE, # Asegura que sea un entorno 'table' flotante
+          font.size = "small", # Ajusta el tamaño de la fuente si es necesario
+          out = file.path("views", "rmse_validatiion_set.tex")
+)
+
 
 ################## GRAFICO ####################################
 # Estimar el modelo con interacciones
@@ -285,8 +309,14 @@ new_data <- expand.grid(
 new_data$Edad2 <- new_data$edad^2
 # Predecir los salarios
 new_data$predictions_with_ci <- predict(model_interaction, newdata = new_data, interval = "confidence", level = 0.95)
-predictions_with_ci$predictions_with_ci <- predict(model_interaction, newdata = new_data, interval = "confidence", level = 0.95)
+predictions_with_ci <- predict(model_interaction, newdata = new_data, interval = "confidence", level = 0.95)
 df.predict.peak.age<-as.data.frame(predictions_with_ci)
+names(df.predict.peak.age)
+
+new_data$fit <- df.predict.peak.age$fit
+new_data$lwr <- df.predict.peak.age$lwr
+new_data$upr <- df.predict.peak.age$upr
+
 
 ##################### Exportar la base final #################################
 export(new_data, store_file("edad_pico.rds"))
@@ -297,9 +327,9 @@ peak_age_hombres <- 61.18792
 peak_age_mujeres <- 57.15148
 
 # 2. Código para la gráfica
-png(file.path("views", "graf_edad_pico_con_lineas.png"), width = 800, height = 600)
+png(file.path("views", "graf_edad_pico_intervalos.png"), width = 800, height = 600)
 
-ggplot(df.predict.peak.age, aes(x = edad, y = fit, color = factor(Mujer), fill = factor(Mujer))) +
+ggplot(new_data, aes(x = edad, y = fit, color = factor(Mujer), fill = factor(Mujer))) +
   
   # Capa para el intervalo de confianza (la cinta sombreada)
   geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2, color = NA) +
@@ -317,7 +347,7 @@ ggplot(df.predict.peak.age, aes(x = edad, y = fit, color = factor(Mujer), fill =
   # --- ETIQUETAS PARA LAS LÍNEAS VERTICALES ---
   annotate("text", 
            x = peak_age_hombres, 
-           y = min(df.predict.peak.age$lwr), # Posición en el eje Y (abajo)
+           y = min(new_data$lwr), # Posición en el eje Y (abajo)
            label = paste("Pico Hombres\n", round(peak_age_hombres, 1), "años"), 
            vjust = -0.5, # Ajuste vertical para que no se pegue a la línea
            color = "#0072B2",
@@ -325,7 +355,7 @@ ggplot(df.predict.peak.age, aes(x = edad, y = fit, color = factor(Mujer), fill =
   
   annotate("text", 
            x = peak_age_mujeres, 
-           y = min(df.predict.peak.age$lwr), # Posición en el eje Y (abajo)
+           y = min(new_data$lwr), # Posición en el eje Y (abajo)
            label = paste("Pico Mujeres\n", round(peak_age_mujeres, 1), "años"), 
            vjust = -1.5, # Ajuste vertical diferente para evitar solapamiento
            color = "#D55E00",
