@@ -153,11 +153,6 @@ rmse_tbl <- data.frame(
 stargazer(rmse_tbl, type = "text", summary = FALSE, rownames = FALSE,
           digits=5, title = "RMSE en Set de Prueba")
 
-## Guardamos una versión de la tabla en latex para el doc final 
-
-stargazer(rmse_tbl, type = "latex", summary = FALSE, rownames = FALSE,
-          digits=5, title = "RMSE en Set de Prueba")
-
 
 ## El modelo con menor RMSE es el modelo 4 
 
@@ -214,20 +209,81 @@ modelo5cv <- train(formula5,
 
 rmse_m5loocv <- modelo5cv$results$RMSE[1]
 
+
+## Calculamos el LOOCV mediante una iteración usando el leverage
+
+## Para el modelo 4
+
+model4_full <- lm(formula4, data=pred_df)
+predictions_4 <- predict(model4_full, new_data=pred_df)
+
+pred_df <- pred_df %>%
+  mutate(predictions_m4=predictions_4)
+
+pred_df <- pred_df %>%
+  mutate(residuals_m4=model4_full$residuals)
+
+pred_df <- pred_df %>%
+  mutate(leverage4 = hatvalues(model4_full))
+
+residuos_loo4 <- pred_df$residuals_m4/(1-pred_df$leverage4)
+
+rmse_m4loocv_it1 <- sqrt(mean(residuos_loo^2))
+
+
+## Para el modelo 5
+
+model5_full <- lm(formula5, data=pred_df)
+predictions_5 <- predict(model5_full, new_data=pred_df)
+
+pred_df <- pred_df %>%
+  mutate(predictions_m5=predictions_5)
+
+pred_df <- pred_df %>%
+  mutate(residuals_m5=model5_full$residuals)
+
+pred_df <- pred_df %>%
+  mutate(leverage5 = hatvalues(model5_full))
+
+residuos_loo5 <- pred_df$residuals_m5/(1-pred_df$leverage5)
+
+rmse_m5loocv_it1 <- sqrt(mean(residuos_loo5^2))
+
 ##objeto con los resultados
 
 final_results <- data.frame(
   Modelo = c("Modelo 4", "Modelo 5"),
   VS_approach = c(rmse4,rmse5),
-  LOOCV = c(rmse_m4loocv, rmse_m5loocv)
+  LOOCV = c(rmse_m4loocv, rmse_m5loocv),
+  LOOCV_unica_iteracion = c(rmse_m4loocv_it1,rmse_m5loocv_it1)
 )
 
 stargazer(final_results, type = "text", summary = FALSE, rownames = FALSE,
           digits=5, title = "Comparación RMSE: Validation Set vs LOOCV")
 
-## Guardamos una versión para el doc en latex
+# ==============================================================================
+
+# 6. Exportar Bases de Datos y Resultados
+
+# ==============================================================================
+
+## Tabla RMSE del validation set
+
+stargazer(rmse_tbl, type = "latex", summary = FALSE, rownames = FALSE,
+          digits=5, title = "RMSE en Set de Prueba" ,
+          out = file.path("views", "rmse_validation_set.tex"))
+
+## Table RMSE Validation Set y LOOCV
 stargazer(final_results, type = "latex", summary = FALSE, rownames = FALSE,
-          digits=5, title = "Comparación RMSE: Validation Set vs LOOCV")
+          digits=5, title = "Comparación RMSE: Validation Set vs LOOCV",
+          out = file.path("views", "RMSE_LOOCV.tex"))
+
+# Exportar la base completa, train y test
+export(pred_df, store_file("base_predictions.rds"))
+export(train, store_file("train_set.rds"))
+export(test, store_file("test_set.rds"))
+
+
 
 
 
